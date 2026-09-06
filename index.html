@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrisisCast AI — SafeRoute Weather & Disaster Radar Intelligence</title>
+  <meta name="description" content="Futuristic, client-side meteorological intelligence dashboard featuring live global weather tracking, AI micro-climate analytics, natural disaster alerts, and interactive safe travel routing.">
+  
+  <!-- Google Fonts: Inter, JetBrains Mono, Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            orbitron: ['Orbitron', 'sans-serif'],
+          },
+          colors: {
+            obsidian: {
+              950: '#040711',
+              900: '#080d1a',
+              850: '#0c1324',
+              800: '#111a30',
+              700: '#1b2745',
+              600: '#26375c',
+            },
+            cyber: {
+              cyan: '#00f5d4',
+              sky: '#38bdf8',
+              blue: '#2563eb',
+              amber: '#fbbf24',
+              rose: '#f43f5e',
+              emerald: '#10b981',
+              purple: '#a855f7'
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'radar-spin': 'radarSpin 4s linear infinite',
+            'glow-pulse': 'glowPulse 2s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            radarSpin: {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
+            },
+            glowPulse: {
+              '0%': { opacity: '0.4', filter: 'drop-shadow(0 0 4px rgba(0,245,212,0.4))' },
+              '100%': { opacity: '1', filter: 'drop-shadow(0 0 14px rgba(0,245,212,0.8))' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-obsidian-950 text-slate-100 font-sans min-h-screen selection:bg-cyber-cyan selection:text-obsidian-950 antialiased overflow-x-hidden">
+
+  <!-- Background Ambient Cyber Gradients & Grid -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-cyber-cyan/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-cyber-purple/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-cyber-blue/10 rounded-full blur-3xl"></div>
+    <div class="cyber-grid-overlay"></div>
+  </div>
+
+  <div class="relative z-10 flex flex-col min-h-screen">
+    <!-- Top HUD Navigation Bar -->
+    <header class="border-b border-obsidian-700/60 bg-obsidian-900/80 backdrop-blur-md sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        
+        <!-- Logo & Brand -->
+        <div class="flex items-center space-x-3">
+          <div class="relative w-10 h-10 rounded-lg bg-obsidian-800 border border-cyber-cyan/40 flex items-center justify-center shadow-[0_0_15px_rgba(0,245,212,0.25)]">
+            <i class="fa-solid fa-satellite-dish text-cyber-cyan text-lg"></i>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyber-emerald rounded-full animate-ping"></span>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyber-emerald rounded-full"></span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-orbitron font-extrabold text-lg sm:text-xl tracking-wider text-white">
+                CRISIS<span class="text-cyber-cyan">CAST</span>
+              </span>
+              <span class="text-[10px] uppercase font-mono font-bold bg-cyber-cyan/10 text-cyber-cyan px-2 py-0.5 rounded border border-cyber-cyan/30">
+                AI 2.0
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-400 font-mono tracking-widest hidden sm:block">
+              SAFEROUTE &amp; DISASTER INTELLIGENCE
+            </p>
+          </div>
+        </div>
+
+        <!-- Center: System Telemetry & Clock -->
+        <div class="hidden md:flex items-center gap-4 text-xs font-mono bg-obsidian-850/80 px-3 py-1.5 rounded-full border border-obsidian-700/60">
+          <div class="flex items-center gap-2 text-cyber-emerald">
+            <span class="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse"></span>
+            <span>RADAR FEED: LIVE</span>
+          </div>
+          <span class="text-slate-600">|</span>
+          <div class="text-slate-300">
+            <i class="fa-regular fa-clock text-cyber-cyan/80 mr-1"></i>
+            <span id="utc-clock">00:00:00 UTC</span>
+          </div>
+        </div>
+
+        <!-- Right: Threat Badge, Unit Switcher & Settings -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Live Threat Pill -->
+          <div id="threat-pill" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cyber-emerald/40 bg-cyber-emerald/10 text-cyber-emerald text-xs font-mono font-semibold transition-all duration-300">
+            <i id="threat-pill-icon" class="fa-solid fa-shield-check"></i>
+            <span id="threat-pill-text">THREAT: NOMINAL</span>
+          </div>
+
+          <!-- Unit Toggle (°C / °F) -->
+          <button id="unit-toggle-btn" class="px-2.5 py-1 text-xs font-mono bg-obsidian-800 hover:bg-obsidian-700 text-slate-300 rounded border border-obsidian-700/80 transition-colors" title="Toggle Celsius / Fahrenheit">
+            <span id="unit-label" class="font-bold text-cyber-cyan">°C</span> / °F
+          </button>
+
+          <!-- Settings Cog Modal Trigger -->
+          <button id="settings-open-btn" class="relative p-2 rounded-lg bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-700/80 text-slate-300 hover:text-cyber-cyan transition-colors" title="API Configuration & AI Settings">
+            <i class="fa-solid fa-sliders text-sm"></i>
+            <span id="key-indicator" class="absolute top-1 right-1 w-2 h-2 bg-cyber-cyan rounded-full"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Alert Banner (Conditional / Dynamic) -->
+    <div id="disaster-marquee-banner" class="hidden border-b border-cyber-rose/40 bg-cyber-rose/10 px-4 py-2 text-xs font-mono text-cyber-rose flex items-center justify-between gap-2 transition-all">
+      <div class="flex items-center gap-2 overflow-hidden">
+        <i class="fa-solid fa-triangle-exclamation animate-bounce text-sm"></i>
+        <span class="font-bold uppercase tracking-wide">CRITICAL ALERT:</span>
+        <span id="marquee-text" class="truncate text-slate-200">Severe storm front detected approaching target coordinates.</span>
+      </div>
+      <button id="marquee-inspect-btn" class="px-2 py-0.5 bg-cyber-rose/20 hover:bg-cyber-rose/40 rounded text-[11px] font-bold border border-cyber-rose/50 whitespace-nowrap">
+        VIEW RADAR
+      </button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+      <!-- Search & Hub Selector Bar -->
+      <section class="space-y-3">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <!-- Search Engine Input -->
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-cyber-cyan/70">
+              <i class="fa-solid fa-magnifying-glass-location text-base"></i>
+            </div>
+            <input 
+              type="text" 
+              id="city-search-input" 
+              placeholder="Query any global city, airport, coordinate, or region (e.g., Tokyo, London, Miami)..."
+              class="w-full pl-10 pr-24 py-3 bg-obsidian-900/90 border border-obsidian-700/80 focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan rounded-xl text-sm font-sans placeholder-slate-500 text-white shadow-inner focus:outline-none transition-all"
+              autocomplete="off"
+            >
+            <div class="absolute inset-y-0 right-1 flex items-center gap-1 pr-1.5">
+              <button id="locate-me-btn" class="p-2 text-slate-400 hover:text-cyber-cyan rounded-lg hover:bg-obsidian-800 transition" title="Use Current GPS Coordinates">
+                <i class="fa-solid fa-crosshairs text-sm"></i>
+              </button>
+              <button id="search-submit-btn" class="px-3 py-1.5 bg-cyber-cyan hover:bg-cyan-400 text-obsidian-950 font-mono font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(0,245,212,0.3)] transition">
+                SEARCH
+              </button>
+            </div>
+            <!-- Search Autocomplete Suggestions Dropdown -->
+            <div id="search-suggestions" class="hidden absolute top-full left-0 right-0 mt-1 bg-obsidian-900 border border-obsidian-700 rounded-xl shadow-2xl z-50 overflow-hidden font-sans text-xs max-h-60 overflow-y-auto"></div>
+          </div>
+
+          <!-- Simulation Quick Triggers -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <span class="text-[11px] font-mono text-slate-400 uppercase hidden lg:inline mr-1">SIMULATE:</span>
+            <button data-sim="hurricane" class="sim-btn px-2.5 py-1.5 rounded-lg text-xs font-mono border border-cyber-rose/40 bg-cyber-rose/10 hover:bg-cyber-rose/20 text-cyber-rose transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-hurricane"></i> Hurricane
+            </button>
+            <button data-sim="blizzard" class="sim-btn px-2.5 py-1.5 rounded-lg text-xs font-mono border border-cyber-sky/40 bg-cyber-sky/10 hover:bg-cyber-sky/20 text-cyber-sky transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-snowflake"></i> Blizzard
+            </button>
+            <button data-sim="heatwave" class="sim-btn px-2.5 py-1.5 rounded-lg text-xs font-mono border border-cyber-amber/40 bg-cyber-amber/10 hover:bg-cyber-amber/20 text-cyber-amber transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-temperature-arrow-up"></i> Heatwave
+            </button>
+            <button data-sim="clear" class="sim-btn px-2.5 py-1.5 rounded-lg text-xs font-mono border border-cyber-emerald/40 bg-cyber-emerald/10 hover:bg-cyber-emerald/20 text-cyber-emerald transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-sun"></i> Reset Live
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Hub Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-xs">
+          <span class="text-slate-500 font-mono text-[11px] whitespace-nowrap flex items-center gap-1">
+            <i class="fa-solid fa-satellite text-[10px] text-cyber-cyan"></i> QUICK HUBS:
+          </span>
+          <button data-city="Tokyo, Japan" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">Tokyo</button>
+          <button data-city="New York, USA" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">New York</button>
+          <button data-city="London, UK" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">London</button>
+          <button data-city="Reykjavik, Iceland" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">Reykjavik</button>
+          <button data-city="Miami, USA" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">Miami</button>
+          <button data-city="Singapore" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">Singapore</button>
+          <button data-city="Sydney, Australia" class="hub-pill px-2.5 py-1 rounded-full bg-obsidian-850 hover:bg-obsidian-750 text-slate-300 hover:text-cyber-cyan border border-obsidian-700/60 transition whitespace-nowrap">Sydney</button>
+        </div>
+      </section>
+
+      <!-- Primary Grid: Live Weather Dashboard (Left) + AI & Disaster Matrix (Right) -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Current Conditions & Telemetry Gauges (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Hero Weather Card with Glassmorphic HUD -->
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-obsidian-900/90 via-obsidian-850/80 to-obsidian-900/90 border border-obsidian-700/80 p-6 shadow-2xl backdrop-blur-xl group">
+            <!-- Ambient Glow Spot -->
+            <div id="hero-ambient-glow" class="absolute -right-10 -top-10 w-48 h-48 bg-cyber-cyan/15 rounded-full blur-2xl pointer-events-none transition-all duration-700"></div>
+
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              
+              <!-- City, Coordinates & Condition Info -->
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-obsidian-700/80 text-slate-300 border border-obsidian-600">
+                    <i class="fa-solid fa-location-dot text-cyber-cyan mr-1"></i>
+                    <span id="display-coords">35.6762° N, 139.6503° E</span>
+                  </span>
+                  <span id="data-provider-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30">
+                    OPEN-METEO LIVE
+                  </span>
+                </div>
+
+                <h1 id="city-name" class="text-3xl sm:text-4xl font-extrabold font-orbitron tracking-tight text-white">
+                  Tokyo, Japan
+                </h1>
+                
+                <p id="weather-description" class="text-slate-400 font-sans text-sm flex items-center gap-2 capitalize">
+                  <span id="weather-condition-badge" class="w-2 h-2 rounded-full bg-cyber-emerald"></span>
+                  Partly Cloudy with Scattered High Cirrus
+                </p>
+
+                <div class="text-xs font-mono text-slate-500 pt-1">
+                  LAST TELEMETRY UPDATE: <span id="last-updated-time" class="text-slate-300">Just Now</span>
+                </div>
+              </div>
+
+              <!-- Temperature Display & Large Animated Weather Icon -->
+              <div class="flex items-center gap-4">
+                <div class="text-right">
+                  <div class="flex items-start justify-end">
+                    <span id="current-temp" class="text-5xl sm:text-6xl font-extrabold font-orbitron tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-cyber-cyan drop-shadow-[0_0_20px_rgba(0,245,212,0.3)]">
+                      24
+                    </span>
+                    <span id="temp-unit-symbol" class="text-xl sm:text-2xl font-orbitron font-bold text-cyber-cyan ml-1 mt-1">°C</span>
+                  </div>
+                  <div class="text-xs font-mono text-slate-400 flex items-center justify-end gap-2 mt-1">
+                    <span>FEELS: <strong id="feels-like-temp" class="text-slate-200">23°C</strong></span>
+                    <span class="text-slate-600">|</span>
+                    <span>H: <strong id="max-temp" class="text-cyber-rose">27°</strong> L: <strong id="min-temp" class="text-cyber-sky">18°</strong></span>
+                  </div>
+                </div>
+
+                <!-- Animated Weather Icon Container -->
+                <div id="weather-icon-container" class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl bg-obsidian-800/80 border border-obsidian-700/60 shadow-[0_0_20px_rgba(0,0,0,0.4)]">
+                  <i class="fa-solid fa-cloud-sun text-4xl text-cyber-amber animate-pulse"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weather Alert Barometer Ribbon -->
+            <div id="quick-alert-strip" class="mt-6 pt-4 border-t border-obsidian-700/50 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-wind text-cyber-cyan"></i>
+                <span class="text-slate-400">ATMOSPHERIC STATE:</span>
+                <span id="atmos-state" class="text-cyber-emerald font-bold">STABLE VORTEX</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-slate-400">SURFACE COMFORT:</span>
+                <span id="comfort-index" class="text-slate-200 bg-obsidian-800 px-2 py-0.5 rounded border border-obsidian-700">OPTIMAL</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Telemetry Matrix (6 Cards) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+            
+            <!-- 1. Wind Speed & Direction -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">WIND VELOCITY</span>
+                <i class="fa-solid fa-wind text-cyber-cyan group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="wind-speed" class="text-2xl font-orbitron font-bold text-white">14.2</span>
+                  <span id="wind-unit" class="text-xs font-mono text-slate-400">km/h</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1 text-[11px] font-mono text-slate-400">
+                  <i id="wind-arrow" class="fa-solid fa-location-arrow text-cyber-cyan transform transition-transform" style="transform: rotate(45deg);"></i>
+                  <span id="wind-direction">NE (45°)</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="wind-bar" class="bg-cyber-cyan h-full rounded-full transition-all duration-500" style="width: 25%;"></div>
+              </div>
+            </div>
+
+            <!-- 2. Relative Humidity & Dew Point -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">HUMIDITY</span>
+                <i class="fa-solid fa-droplet text-cyber-sky group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="humidity" class="text-2xl font-orbitron font-bold text-white">58</span>
+                  <span class="text-xs font-mono text-slate-400">%</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 mt-1">
+                  DEW POINT: <span id="dew-point" class="text-slate-200">14°C</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="humidity-bar" class="bg-cyber-sky h-full rounded-full transition-all duration-500" style="width: 58%;"></div>
+              </div>
+            </div>
+
+            <!-- 3. Barometric Pressure -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">PRESSURE</span>
+                <i class="fa-solid fa-gauge-high text-cyber-purple group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="pressure" class="text-2xl font-orbitron font-bold text-white">1014</span>
+                  <span class="text-xs font-mono text-slate-400">hPa</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 mt-1">
+                  TREND: <span id="pressure-trend" class="text-cyber-emerald font-bold">STABLE</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="pressure-bar" class="bg-cyber-purple h-full rounded-full transition-all duration-500" style="width: 65%;"></div>
+              </div>
+            </div>
+
+            <!-- 4. UV Radiation Index -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">UV INDEX</span>
+                <i class="fa-solid fa-sun text-cyber-amber group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="uv-index" class="text-2xl font-orbitron font-bold text-white">4.8</span>
+                  <span class="text-xs font-mono text-slate-400">/ 12</span>
+                </div>
+                <div class="text-[11px] font-mono text-cyber-amber mt-1">
+                  RATING: <span id="uv-rating" class="font-bold">MODERATE</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="uv-bar" class="bg-cyber-amber h-full rounded-full transition-all duration-500" style="width: 40%;"></div>
+              </div>
+            </div>
+
+            <!-- 5. Optical Visibility -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">VISIBILITY</span>
+                <i class="fa-solid fa-eye text-cyber-emerald group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="visibility" class="text-2xl font-orbitron font-bold text-white">10.0</span>
+                  <span id="visibility-unit" class="text-xs font-mono text-slate-400">km</span>
+                </div>
+                <div class="text-[11px] font-mono text-cyber-emerald mt-1">
+                  STATUS: <span id="visibility-status" class="font-bold">CRYSTAL CLEAR</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="visibility-bar" class="bg-cyber-emerald h-full rounded-full transition-all duration-500" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <!-- 6. Precipitation & Cloud Cover -->
+            <div class="metric-card bg-obsidian-900/80 border border-obsidian-700/70 hover:border-cyber-cyan/50 p-4 rounded-xl transition-all duration-300 flex flex-col justify-between group">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-[11px] font-mono tracking-wider">PRECIP / CLOUD</span>
+                <i class="fa-solid fa-cloud-showers-heavy text-cyber-blue group-hover:scale-110 transition-transform"></i>
+              </div>
+              <div>
+                <div class="flex items-baseline gap-1">
+                  <span id="cloud-cover" class="text-2xl font-orbitron font-bold text-white">32</span>
+                  <span class="text-xs font-mono text-slate-400">%</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 mt-1">
+                  RAIN PROB: <span id="precip-probability" class="text-slate-200">10%</span>
+                </div>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="cloud-bar" class="bg-cyber-blue h-full rounded-full transition-all duration-500" style="width: 32%;"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Forecast Timeline (Hourly & 7-Day Switcher) -->
+          <div class="bg-obsidian-900/80 border border-obsidian-700/70 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-cyber-cyan"></i>
+                <h2 class="font-orbitron text-sm font-bold tracking-wide uppercase text-white">
+                  MICRO-CLIMATE FORECAST MATRIX
+                </h2>
+              </div>
+              <div class="flex items-center p-1 bg-obsidian-800 rounded-lg border border-obsidian-700/60 text-xs font-mono">
+                <button id="tab-hourly-btn" class="px-3 py-1 rounded bg-cyber-cyan/20 text-cyber-cyan font-bold transition">24-HR TIMELINE</button>
+                <button id="tab-daily-btn" class="px-3 py-1 rounded text-slate-400 hover:text-white transition">7-DAY EXTENDED</button>
+              </div>
+            </div>
+
+            <!-- Hourly Scroll Container -->
+            <div id="hourly-forecast-container" class="flex gap-3 overflow-x-auto pb-2 pt-1 no-scrollbar">
+              <!-- Dynamically Populated by app.js -->
+            </div>
+
+            <!-- 7-Day Grid Container (Initially Hidden) -->
+            <div id="daily-forecast-container" class="hidden space-y-2 pt-1">
+              <!-- Dynamically Populated by app.js -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: AI Insights, Activity Scores & Disaster Radar (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- AI Weather Insights & Predictive Analytics Module -->
+          <div class="rounded-2xl bg-gradient-to-b from-obsidian-900 via-obsidian-850 to-obsidian-900 border border-cyber-cyan/30 p-5 shadow-[0_0_25px_rgba(0,245,212,0.1)] relative overflow-hidden">
+            <!-- Neon Corner Decorator -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cyber-cyan/20 to-transparent pointer-events-none"></div>
+            
+            <div class="flex items-center justify-between mb-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/40 flex items-center justify-center text-cyber-cyan">
+                  <i class="fa-solid fa-brain text-sm"></i>
+                </div>
+                <div>
+                  <h3 class="font-orbitron font-bold text-sm tracking-wider text-white">AI PREDICTIVE INSIGHTS</h3>
+                  <span id="ai-engine-status" class="text-[10px] font-mono text-cyber-cyan/80">NEURAL SYNAPSE ACTIVE</span>
+                </div>
+              </div>
+              <button id="refresh-ai-btn" class="p-1.5 text-slate-400 hover:text-cyber-cyan hover:bg-obsidian-800 rounded transition" title="Rerun AI Predictions">
+                <i class="fa-solid fa-rotate text-xs"></i>
+              </button>
+            </div>
+
+            <!-- AI Micro-climate Narrative Output -->
+            <div class="bg-obsidian-950/80 border border-obsidian-700/60 rounded-xl p-3.5 mb-4 text-xs font-sans text-slate-300 leading-relaxed relative">
+              <div class="flex items-start gap-2.5">
+                <i class="fa-solid fa-quote-left text-cyber-cyan/50 mt-0.5"></i>
+                <p id="ai-prediction-narrative" class="space-y-1">
+                  Analyzing real-time meteorological vectors... High probability of thermal stability with mild westerly breeze. Low micro-turbulence expected along transit corridors over the next 18 hours.
+                </p>
+              </div>
+            </div>
+
+            <!-- Travel Viability & Activity Matrix -->
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-400">TRAVEL VIABILITY SCORE:</span>
+                <span id="viability-score-text" class="text-cyber-emerald font-bold">92 / 100 (OPTIMAL)</span>
+              </div>
+              <div class="w-full bg-obsidian-950 h-2 rounded-full overflow-hidden border border-obsidian-800">
+                <div id="viability-meter" class="bg-gradient-to-r from-cyber-cyan to-cyber-emerald h-full transition-all duration-700" style="width: 92%;"></div>
+              </div>
+
+              <!-- Activity Suitability Badges -->
+              <div class="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
+                <div class="activity-card bg-obsidian-950/70 p-2 rounded-lg border border-obsidian-800 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-slate-300">
+                    <i class="fa-solid fa-car text-cyber-cyan"></i> Highway Transit
+                  </span>
+                  <span id="score-highway" class="text-cyber-emerald font-bold">95%</span>
+                </div>
+                <div class="activity-card bg-obsidian-950/70 p-2 rounded-lg border border-obsidian-800 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-slate-300">
+                    <i class="fa-solid fa-plane text-cyber-sky"></i> Aviation / Drone
+                  </span>
+                  <span id="score-aviation" class="text-cyber-emerald font-bold">88%</span>
+                </div>
+                <div class="activity-card bg-obsidian-950/70 p-2 rounded-lg border border-obsidian-800 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-slate-300">
+                    <i class="fa-solid fa-person-hiking text-cyber-amber"></i> Outdoor / Trek
+                  </span>
+                  <span id="score-outdoor" class="text-cyber-emerald font-bold">90%</span>
+                </div>
+                <div class="activity-card bg-obsidian-950/70 p-2 rounded-lg border border-obsidian-800 flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-slate-300">
+                    <i class="fa-solid fa-ship text-cyber-purple"></i> Marine / Nautical
+                  </span>
+                  <span id="score-marine" class="text-cyber-amber font-bold">76%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recommended Gear / Attire Advisory -->
+            <div class="bg-obsidian-950/70 border border-obsidian-800 rounded-xl p-3 text-[11px] font-mono text-slate-300 mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-vest-patches text-cyber-amber"></i>
+              <span class="text-slate-400">ATTIRE ADVISORY:</span>
+              <span id="ai-attire-recommendation" class="text-slate-200 truncate">Breathable light layer, UV protective eyewear.</span>
+            </div>
+
+            <!-- Interactive "Ask CrisisCast AI" Inquiry Bar -->
+            <div class="pt-2 border-t border-obsidian-800/80">
+              <form id="ai-ask-form" class="flex gap-2">
+                <input 
+                  type="text" 
+                  id="ai-ask-input" 
+                  placeholder="Ask AI: e.g. 'Safe for highway driving tonight?'" 
+                  class="flex-1 px-3 py-2 bg-obsidian-950 border border-obsidian-700 focus:border-cyber-cyan rounded-lg text-xs font-sans text-white placeholder-slate-500 focus:outline-none"
+                >
+                <button type="submit" class="px-3 py-2 bg-cyber-cyan/20 hover:bg-cyber-cyan/30 text-cyber-cyan border border-cyber-cyan/40 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1">
+                  <span>SEND</span>
+                  <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                </button>
+              </form>
+              <div id="ai-custom-reply" class="hidden mt-2 p-2.5 bg-obsidian-950 rounded-lg border border-cyber-cyan/30 text-xs font-sans text-slate-300 animate-fadeIn"></div>
+            </div>
+
+          </div>
+
+          <!-- Live Natural Disaster Radar Alert Matrix -->
+          <div class="rounded-2xl bg-obsidian-900/90 border border-obsidian-700/80 p-5 shadow-xl relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2.5">
+                <div class="relative w-8 h-8 rounded-lg bg-cyber-rose/10 border border-cyber-rose/40 flex items-center justify-center text-cyber-rose">
+                  <i class="fa-solid fa-satellite-dish text-sm"></i>
+                  <span class="absolute inset-0 border border-cyber-rose/50 rounded-lg animate-ping opacity-30"></span>
+                </div>
+                <div>
+                  <h3 class="font-orbitron font-bold text-sm tracking-wider text-white">DISASTER RADAR ALERTS</h3>
+                  <span class="text-[10px] font-mono text-slate-400">GLOBAL HAZARD SCANNER</span>
+                </div>
+              </div>
+              <span id="active-alert-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyber-emerald/20 text-cyber-emerald border border-cyber-emerald/40">
+                0 ACTIVE THREATS
+              </span>
+            </div>
+
+            <!-- Threat Radar Stream / Alert Feed -->
+            <div id="disaster-alerts-list" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              <!-- Dynamically Populated with Real/Simulated Alert Cards -->
+            </div>
+
+            <!-- Hazard Radar Severity Legend -->
+            <div class="mt-4 pt-3 border-t border-obsidian-800 flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyber-emerald"></span> Green: Safe</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyber-amber"></span> Yellow: Caution</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyber-rose"></span> Red: Imminent</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Interactive Map & Smart SafeRoute Travel Planner -->
+      <section class="rounded-2xl bg-obsidian-900/90 border border-obsidian-700/80 p-5 sm:p-6 shadow-2xl relative space-y-5">
+        
+        <!-- Header & Route Controls -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30">
+                INTERACTIVE RADAR GIS
+              </span>
+              <span class="text-xs text-slate-500 font-mono hidden sm:inline">|</span>
+              <span class="text-xs text-slate-400 font-mono hidden sm:inline">LEAFLET CARTO DARK ENGINE</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-orbitron font-extrabold text-white mt-1">
+              SAFEROUTE™ TRAVEL &amp; HAZARD REROUTING
+            </h2>
+          </div>
+
+          <!-- Map Layer Quick Toggles -->
+          <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <button id="toggle-layer-hazards" class="layer-toggle-btn active px-2.5 py-1.5 rounded-lg border border-cyber-rose/50 bg-cyber-rose/20 text-cyber-rose transition flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation"></i> Hazard Zones
+            </button>
+            <button id="toggle-layer-radar" class="layer-toggle-btn active px-2.5 py-1.5 rounded-lg border border-cyber-cyan/50 bg-cyber-cyan/20 text-cyber-cyan transition flex items-center gap-1.5">
+              <i class="fa-solid fa-cloud-bolt"></i> Precipitation Scan
+            </button>
+            <button id="toggle-layer-safe-route" class="layer-toggle-btn active px-2.5 py-1.5 rounded-lg border border-cyber-emerald/50 bg-cyber-emerald/20 text-cyber-emerald transition flex items-center gap-1.5">
+              <i class="fa-solid fa-route"></i> Safe Bypass Path
+            </button>
+          </div>
+        </div>
+
+        <!-- Travel Planner Input Form -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 bg-obsidian-950/80 rounded-xl border border-obsidian-800">
+          
+          <!-- Origin City -->
+          <div class="sm:col-span-5 relative">
+            <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+              <i class="fa-solid fa-circle-dot text-cyber-cyan mr-1"></i> Origin City / Coordinates
+            </label>
+            <input 
+              type="text" 
+              id="route-origin-input" 
+              placeholder="Origin (e.g., Tokyo)" 
+              value="Tokyo"
+              class="w-full px-3 py-2 bg-obsidian-900 border border-obsidian-700 rounded-lg text-xs font-sans text-white focus:border-cyber-cyan focus:outline-none"
+            >
+          </div>
+
+          <!-- Swap Waypoints Button -->
+          <div class="sm:col-span-2 flex items-end justify-center pb-0.5">
+            <button id="swap-route-btn" class="w-full sm:w-auto px-3 py-2 bg-obsidian-800 hover:bg-obsidian-700 text-slate-400 hover:text-cyber-cyan rounded-lg border border-obsidian-700 transition" title="Swap Origin & Destination">
+              <i class="fa-solid fa-right-left"></i>
+            </button>
+          </div>
+
+          <!-- Destination City -->
+          <div class="sm:col-span-5 relative">
+            <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+              <i class="fa-solid fa-flag-checkered text-cyber-rose mr-1"></i> Destination City / Target
+            </label>
+            <input 
+              type="text" 
+              id="route-dest-input" 
+              placeholder="Destination (e.g., Kyoto)" 
+              value="Kyoto"
+              class="w-full px-3 py-2 bg-obsidian-900 border border-obsidian-700 rounded-lg text-xs font-sans text-white focus:border-cyber-cyan focus:outline-none"
+            >
+          </div>
+
+          <!-- Analyze Route Trigger -->
+          <div class="sm:col-span-12 flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <div class="text-[11px] font-mono text-slate-400 flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-cyber-cyan"></i>
+              <span>Live corridor cross-referencing against extreme wind, flash floods &amp; severe weather.</span>
+            </div>
+            <button id="calculate-route-btn" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-cyber-cyan to-cyber-emerald hover:from-cyan-400 hover:to-emerald-400 text-obsidian-950 font-orbitron font-bold text-xs rounded-lg shadow-[0_0_15px_rgba(0,245,212,0.35)] transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-compass"></i>
+              <span>ANALYZE SAFE ROUTE</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Route Diagnostic Advisory Panel (Dynamic Output) -->
+        <div id="route-advisory-panel" class="hidden rounded-xl border border-obsidian-800 bg-obsidian-950/90 p-4 space-y-3 transition-all">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-obsidian-800 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span id="route-status-icon" class="w-3 h-3 rounded-full bg-cyber-amber animate-ping"></span>
+              <h4 id="route-status-heading" class="font-orbitron font-bold text-sm text-white">ROUTE ANALYSIS: 1 HAZARD INTERCEPT</h4>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-mono text-slate-300">
+              <span>EST. DISTANCE: <strong id="route-dist-text" class="text-cyber-cyan">452 km</strong></span>
+              <span>NOMINAL TIME: <strong id="route-time-text" class="text-slate-100">5h 10m</strong></span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-sans">
+            <!-- Direct Route Status -->
+            <div class="p-3 rounded-lg bg-obsidian-900/80 border border-cyber-rose/30">
+              <div class="flex items-center gap-2 font-mono text-cyber-rose font-bold mb-1">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>DIRECT PATH WARNING</span>
+              </div>
+              <p id="direct-path-warning-text" class="text-slate-300 text-xs">
+                Direct corridor intersects Active Gale Wind &amp; Heavy Rainband between km 180 and km 240. Hydroplaning risk: CRITICAL.
+              </p>
+            </div>
+
+            <!-- Safe Alternative Reroute Recommendation -->
+            <div class="p-3 rounded-lg bg-obsidian-900/80 border border-cyber-emerald/40">
+              <div class="flex items-center gap-2 font-mono text-cyber-emerald font-bold mb-1">
+                <i class="fa-solid fa-shield-check"></i>
+                <span>RECOMMENDED SAFE BYPASS</span>
+              </div>
+              <p id="safe-bypass-text" class="text-slate-300 text-xs">
+                Divert via Southern Coastal Highway (Route 1 Bypass). Avoids active storm center. Adds +28 mins travel time; reduces weather danger index by 85%.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div class="relative w-full h-[450px] sm:h-[520px] rounded-xl overflow-hidden border border-obsidian-700/80 shadow-inner">
+          <div id="map" class="w-full h-full"></div>
+
+          <!-- Floating Map HUD Compass & Zoom Overlay -->
+          <div class="absolute bottom-4 left-4 z-[400] bg-obsidian-900/90 border border-obsidian-700/80 px-3 py-1.5 rounded-lg text-[10px] font-mono text-slate-400 pointer-events-none flex items-center gap-2 backdrop-blur-md">
+            <i class="fa-solid fa-crosshairs text-cyber-cyan"></i>
+            <span>CLICK MAP TO INSPECT WEATHER ANYWHERE</span>
+          </div>
+
+          <!-- Radar Sweep Overlay Animation -->
+          <div id="radar-sweep-screen" class="absolute inset-0 pointer-events-none z-[400] overflow-hidden opacity-25">
+            <div class="radar-line"></div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-obsidian-800 bg-obsidian-900/90 text-slate-500 py-6 text-xs font-mono">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyber-cyan"></span>
+          <span class="text-slate-400 font-bold">CRISISCAST AI METEOROLOGY</span>
+          <span>&copy; 2026. Deployable Client-Side to GitHub Pages.</span>
+        </div>
+        <div class="flex items-center gap-4 text-slate-400">
+          <span>Powered by Open-Meteo &amp; CartoDB</span>
+          <span class="text-slate-700">|</span>
+          <span>Dual AI Engine: Gemini 1.5 + Neural Heuristic</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Settings & API Key Configuration Drawer / Modal -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-obsidian-900 border border-cyber-cyan/40 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-fadeIn">
+      
+      <div class="flex items-center justify-between border-b border-obsidian-800 pb-4 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan">
+            <i class="fa-solid fa-sliders text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-orbitron font-bold text-base text-white">SYSTEM &amp; API CONFIG</h3>
+            <p class="text-[10px] font-mono text-slate-400">Stored safely in client-side localStorage</p>
+          </div>
+        </div>
+        <button id="settings-close-btn" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs font-sans">
+        
+        <!-- Zero Config Notice -->
+        <div class="p-3 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-mono text-[11px] leading-relaxed">
+          <i class="fa-solid fa-circle-check mr-1"></i>
+          <strong>Zero-Key Operational Mode:</strong> CrisisCast AI works immediately out of the box with free Open-Meteo and internal neural AI. Adding keys below is optional!
+        </div>
+
+        <!-- Google Gemini API Key -->
+        <div>
+          <label class="block font-mono text-[11px] text-slate-300 mb-1 flex items-center justify-between">
+            <span>GOOGLE GEMINI API KEY (OPTIONAL)</span>
+            <a href="https://aistudio.google.com/" target="_blank" class="text-cyber-cyan hover:underline text-[10px]">Get Key &rarr;</a>
+          </label>
+          <input 
+            type="password" 
+            id="cfg-gemini-key" 
+            placeholder="AIzaSy..." 
+            class="w-full px-3 py-2 bg-obsidian-950 border border-obsidian-700 rounded-lg text-white font-mono focus:border-cyber-cyan focus:outline-none"
+          >
+          <p class="text-[10px] text-slate-500 mt-1">Directly calls Gemini 1.5 Flash for natural language micro-climate travel analytics.</p>
+        </div>
+
+        <!-- OpenWeatherMap Key (Optional) -->
+        <div>
+          <label class="block font-mono text-[11px] text-slate-300 mb-1 flex items-center justify-between">
+            <span>OPENWEATHERMAP API KEY (OPTIONAL)</span>
+            <a href="https://openweathermap.org/api" target="_blank" class="text-cyber-cyan hover:underline text-[10px]">Get Key &rarr;</a>
+          </label>
+          <input 
+            type="password" 
+            id="cfg-openweather-key" 
+            placeholder="32-character API key" 
+            class="w-full px-3 py-2 bg-obsidian-950 border border-obsidian-700 rounded-lg text-white font-mono focus:border-cyber-cyan focus:outline-none"
+          >
+        </div>
+
+        <!-- AI Engine Preference -->
+        <div>
+          <label class="block font-mono text-[11px] text-slate-300 mb-1">AI PROCESSING ENGINE</label>
+          <select id="cfg-ai-engine" class="w-full px-3 py-2 bg-obsidian-950 border border-obsidian-700 rounded-lg text-white font-mono focus:border-cyber-cyan focus:outline-none">
+            <option value="auto">Auto (Use Gemini Key if present, else Neural Heuristic)</option>
+            <option value="gemini-1.5-flash">Force Google Gemini 1.5 Flash</option>
+            <option value="heuristic">Force Local Client-Side Heuristic Model</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-obsidian-800">
+          <button id="cfg-reset-btn" class="px-4 py-2 bg-obsidian-800 hover:bg-obsidian-700 text-slate-300 rounded-lg font-mono text-xs transition">
+            CLEAR KEYS
+          </button>
+          <button id="cfg-save-btn" class="px-5 py-2 bg-cyber-cyan hover:bg-cyan-400 text-obsidian-950 font-mono font-bold text-xs rounded-lg transition shadow-[0_0_10px_rgba(0,245,212,0.3)]">
+            SAVE &amp; APPLY
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modern HUD Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js" defer></script>
+</body>
+</html>
