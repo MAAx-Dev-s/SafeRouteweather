@@ -915,11 +915,10 @@ function initMap() {
     attributionControl: true
   });
 
-// Dark Futuristic Tiles (100% Free / No API Key Required)
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    subdomains: 'abcd',
-    maxZoom: 19
+// Official OpenStreetMap (100% Free - No API Key - No Watermark Ever)
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(AppState.map);
 
   // Click on map to inspect weather at coordinates
