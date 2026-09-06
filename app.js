@@ -915,9 +915,10 @@ function initMap() {
     attributionControl: true
   });
 
-// Stadia Alidade Smooth Dark Tiles (Free Open Alternative)
-L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>',
+// Dark Futuristic Tiles (100% Free / No API Key Required)
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abcd',
     maxZoom: 19
 }).addTo(AppState.map);
 
